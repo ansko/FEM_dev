@@ -1,0 +1,6 @@
+[submodule "RELEASE_CppPolygons"]
+	path = RELEASE_CppPolygons
+	url = https://github.com/ansko/RELEASE_CppPolygons.git
+[submodule "cluster"]
+	path = cluster
+	url = https://github.com/ansko/ClusterRunner.git
