@@ -7,7 +7,7 @@ class Settings(dict):
         self['L_div_outer_r'] = 5
         self['moduli'] = [232, 4, 1.5]
         self['taus'] = [0.5, 1, 1.5, 2, 2.5, 3]
-        self['ars'] = [5,]# [5, 10, 15, 20, 25]
+        self['ars'] = [5, 10, 15, 20, 25]
         self['disk_thickness'] = 0.1
 
         # cpp
