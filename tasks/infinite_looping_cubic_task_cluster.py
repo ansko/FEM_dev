@@ -282,7 +282,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                 if not tasks:
                     break
                 else:
-                    print('*** tasks on cluster ***')
+                    print('*** tasks on cluster ***', time.asctime())
                     for task in tasks:
                         ls = task.split()
                         print('number={0}, name={1}, state={2}, time={3}'.format(

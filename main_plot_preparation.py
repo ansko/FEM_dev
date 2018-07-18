@@ -30,5 +30,5 @@ if __name__ == '__main__':
     ars = ['5', '10', '15', '20', '25', '50']
     for tau in taus:#['1']:
         for ar in ars:#['5']:
-            main_no_perc(json_name='filtered_x7_shortened.json', ar=ar, tau=tau,
+            main_no_perc(json_name='shortened.json', ar=ar, tau=tau,
                 out_fname='gnuplot/data_to_plot/ar_{0}_tau_{1}'.format(ar, tau))

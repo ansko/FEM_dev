@@ -2,7 +2,6 @@
 
 I. Submodules  
 git submodule add https://github.com/ansko/RELEASE_CppPolygons.git RELEASE_CppPolygons  
-git submodule add https://github.com/ansko/ClusterRunner.git cluster  
 II. Preparatoin  
 cd RELEASE_CppPolygons
 cmake CMakeLists.txt
@@ -16,9 +15,7 @@ FEMFolder - folder where FEM executables are placed
 
 # Running
 
-./proc.py
-./main.py (i wann remove it later)
-
+python3 [ main_intercept.py main_cluster.py main_filtration ]
 
 # Some useful information
 
