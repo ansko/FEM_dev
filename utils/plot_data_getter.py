@@ -235,3 +235,21 @@ class PlotDataGetter:
             for key in sorted(data_to_write.keys()):
                 f.write(str(key) + ' ' + str(data_to_write[key]) + '\n')
         return 0
+
+    def shortened_e_fi(self, json_name, ar, tau, out_fname, minimal_pts_number=10):
+        import json
+        data_to_write = {}
+        data = json.load(open(json_name))
+        for entry in data:
+            if ((float(entry['tau']) == float(tau) and
+                float(entry['ar']) == float(ar))):
+                    try:
+                        data_to_write[entry['fi']] = entry['E']
+                    except Exception:
+                        pprint(entry)
+        if len(data_to_write.keys()) < minimal_pts_number:
+            return 0
+        print(ar, tau, len(data_to_write.keys()))
+        with open(out_fname, 'w') as f:
+            for key in sorted(data_to_write.keys()):
+                f.write(str(key) + ' ' + str(data_to_write[key]) + '\n')

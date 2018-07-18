@@ -197,29 +197,124 @@ class JsonMaker:
             return 0
 
     def json_from_logs_only_valuable(self, **kwargs):
-        valuable_params = set(['fi', 'ar', 'tau', 'L_div_outer_r', 'E'])
+        valuable_params = set(['fi', 'ar', 'tau', 'L_div_outer_r'])
+        moduli =set(['EXX', 'EYY', 'EZZ'])
+        select = {'Ef': 232, 'Ei': 4, 'Em': 1.5}
+        def special_list_from_single_log(log_name):
+            def process_new_log_format(log_content):
+                log_as_list = []
+                entries = log_content.split('**********')
+                for entry in entries:
+                    entry_as_dict = dict()
+                    lines = entry.split('\n')
+                    for line in lines:
+                        for key in valuable_params:
+                            if line.startswith(key):
+                                entry_as_dict[line.split()[0]] = (
+                                    float(line.split()[1])
+                                )
+                    flag_select_satisfied = True
+                    for line in lines:
+                        for key in select.keys():
+                            if (line.startswith(key) and
+                                float(line.split()[1]) != float(select[key])):
+                                    flag_select_satisfied = False
+                                    break
+                    if not flag_select_satisfied:
+                        continue
+                    for line in lines:
+                        for key in moduli:
+                            if line.startswith(key):
+                                new_entry_as_dict = entry_as_dict
+                                new_entry_as_dict['axe'] = key[1:]
+                                new_entry_as_dict['E'] = float(line.split('=')[1])
+                                log_as_list.append(new_entry_as_dict)
+                    if 'fi_real' in entry_as_dict.keys():
+                        entry_as_dict['fi'] = entry_as_dict['fi_real']
+                        del entry_as_dict['fi_real']
+                return log_as_list
+
+            def process_old_log_format(log_content):
+                def get_dict_from_lines_list(lines_list):
+                    entries_list = []
+                    entry_as_dict = dict()
+                    for line in lines_list:
+                        line = line.strip()
+                        if line.startswith('!fi'):
+                            entry_as_dict['fi'] = float(line.split()[1])
+                        elif line.startswith('#') and not line.endswith('#####'):
+                            ls = line.split()
+                            if len(ls) < 8:
+                                ls = line.split('tau')[1].split()
+                                entry_as_dict['ar'] = float(ls[2])
+                                entry_as_dict['tau'] = float(ls[0])
+                            else:
+                                entry_as_dict['ar'] = float(ls[7])
+                                entry_as_dict['tau'] = float(ls[5])
+                        elif line.startswith('L_div_outer_r'):
+                            entry_as_dict['L_div_outer_r'] = float(line.split()[1])
+                        elif line.startswith('!Lr'):
+                            entry_as_dict['L_div_outer_r'] = float(line.split()[1])
+                        # select
+                        elif line.startswith('!Ef'):
+                            if float(line.split()[1]) != float(select['Ef']):
+                                return []
+                        elif line.startswith('!Ei'):
+                            if float(line.split()[1]) != float(select['Ei']):
+                                return []
+                        elif line.startswith('!Em'):
+                            if float(line.split()[1]) != float(select['Em']):
+                                return []
+                    flag_all_valuable_params_set = True
+                    for key in valuable_params:
+                        if key not in entry_as_dict.keys():
+                            flag_all_valuable_params_set = False
+                            print(key)
+                    if not flag_all_valuable_params_set:
+                        print('not all')
+                        return []
+                    for line in lines_list:
+                        line = line.strip()
+                        if (line.startswith('E_XX') or
+                            line.startswith('E_YY') or
+                            line.startswith('E_ZZ')):
+                                modulus = line.split()[1]
+                                if modulus == 'None':
+                                    continue
+                                new_entry_as_dict = entry_as_dict
+                                new_entry_as_dict['axe'] = line.split()[0][2:]
+                                new_entry_as_dict['E'] = float(modulus)
+                                entries_list.append(new_entry_as_dict)
+                    return entries_list
+
+                log_as_list = []
+                lines_list = []
+                for line in log_content.split('\n'):
+                    if line.endswith('#######'):
+                        if lines_list:
+                            log_as_list.extend(
+                                get_dict_from_lines_list(lines_list))
+                        lines_list = []
+                    else:
+                        lines_list.append(line)
+
+                return log_as_list
+
+            with open(log_name) as f:
+                log_content = f.read()
+                if log_content.startswith('**********'):
+                    return process_new_log_format(log_content)
+                elif log_content.split('\n')[0].endswith('#########'):
+                    return process_old_log_format(log_content)
+                else:
+                    print('unknown log format', log)
+                    return []
+
         all_logs_content = []
         for log in kwargs['logs']:
-            current_log_content = self.list_from_log(
-                json_name=kwargs['json_name'],
-                log_separator=kwargs['log_separator'],
-                log=log)
-            for entry in current_log_content:
-                flag = True
-                short_entry = dict()
-                # fi
-                if 'fi_real' in entry.keys():
-                    short_entry['fi'] = entry['fi_real']
-                else:
-                    pprint(entry)
-                    print('---', log)
-                    sys.exit()
-                for param in valuable_params:
-                    if param not in short_entry.keys():
-                        flag = False
-                        break
-                if flag:
-                    all_log_content.append(short_entry)
+            got_from_log = special_list_from_single_log(log)
+            print(log.split('/')[-1], len(got_from_log))
+            all_logs_content.extend(got_from_log)
         with open(kwargs['json_name'], 'w') as f:
             json.dump(all_logs_content, f, indent=4)
         print(len(all_logs_content), 'entries were written to',

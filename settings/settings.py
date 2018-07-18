@@ -11,7 +11,7 @@ class Settings(dict):
         self['disk_thickness'] = 0.1
 
         # cpp
-        self['cpp_directory'] = 'RELEASE_CppPolygons/'
+        self['cpp_directory'] = '/home/anton/AspALL/Projects/FEM_dev/RELEASE_CppPolygons/'
         self['cpp_settings_fname'] = 'settings_cpp'
         self['mixing_steps'] = 1000
         self['max_attempts'] = 1000

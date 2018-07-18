@@ -34,6 +34,8 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             'FEMFolder', 'memory', 'limitation_memory_ratio', 'taus',
             'disk_thickness'):
                 self.initial_settings[key] = settings[key]
+
+        self.initial_settings['ars'] = [10]#self.initial_settings['ars']
         wd = 'cubic'
         if 'working_directory' in kwargs.keys():
             wd = kwargs['working_directory']
@@ -47,12 +49,15 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             self.initial_settings[key] = (
                 self.initial_settings['FEMFolder'] + settings[key]
             )
+        if wd not in os.listdir():
+            os.mkdir(wd)
+        os.chdir(wd)
         try:
             self.initial_settings['task_name'] = kwargs['task_name']
             asc_time = time.asctime().split()
             self.year_month_day = '_'.join([asc_time[4], asc_time[1], asc_time[2]])
-            self.py_main_log = self.wd + 'py_main_log_' + self.year_month_day
-            for dirname in ['logs', 'geo', wd]:
+            self.py_main_log = 'py_main_log_' + self.year_month_day
+            for dirname in ['logs', 'geo']:
                 if dirname not in os.listdir():
                     os.mkdir(dirname)
         except Exception as e: # Something that should never happen
@@ -61,10 +66,8 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
     def print_info(self, *args, **kwargs):
         print('***', time.asctime())
         print('loops={0}/{1}'.format(
-            self.successful_loops_performed, self.loops_performed))
-        #pprint(self.initial_settings)
-        #pprint(self.loop_settings)
-        #pprint(self.last_loop_state)
+            self.successful_loops_performed, self.loops_performed
+        ))
 
     def set_loop_settings(self, *args, **kwargs):
         self.loop_settings = dict()
@@ -93,6 +96,8 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                     'Lr', str(self.initial_settings['L_div_outer_r']),
                     'ar', str(self.loop_settings['ar'])]),
                 'geo'])])
+        pprint(self.loop_settings)
+
 
     def loop(self, *args, **kwargs):
         def run_cpp():
@@ -118,7 +123,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                     if not required_setting in settings.keys():
                         print('error: required general setting is not set')
                         return 0
-                with open(self.wd + fname, 'w') as f:
+                with open(fname, 'w') as f:
                     for (setting_name, setting_value) in settings.items():
                         f.write(' '.join([
                             str(setting_name), str(setting_value), '\n']))
@@ -131,7 +136,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                 [self.initial_settings['cpp_directory'] +
                     self.initial_settings['cpp_polygons_executables']
                         [self.initial_settings['task_name']],
-                 self.wd + self.initial_settings['cpp_settings_fname']],
+                 self.initial_settings['cpp_settings_fname']],
                 stdout=open('logs/cpp_log_{0}'.format(self.year_month_day), 'a'),
                 stderr=open('logs/all_errors_{0}'.format(self.year_month_day),
                     'a'))
@@ -179,7 +184,8 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                 Lx = self.loop_settings['Lx']
                 moduli = self.initial_settings['moduli']
                 for axe in ['XX', 'YY', 'ZZ']:
-                    with open('input_{0}.txt'.format(axe), 'w') as fem_input:
+                    fname = 'input_{0}.txt'.format(axe)
+                    with open(fname, 'w') as fem_input:
                         fem_input.write('\n'.join([
                             'SizeX {0}'.format(Lx),
                             'SizeY {0}'.format(Lx),
@@ -249,12 +255,14 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                         FEMmain_returned)
                 return FEMmain_returned
 
-            create_fem_input()
-            run_gen_mesh()
-            run_process_mesh()
-            run_fem_main('XX')
-            run_fem_main('YY')
-            run_fem_main('ZZ')
+            for task in [create_fem_input, run_gen_mesh, run_process_mesh]:
+                code = task()
+                print(task.__name__, code)
+                if code not in [0, 2]:
+                    return code
+            for axe in ['XX', 'YY', 'ZZ']:
+                code = run_fem_main(axe)
+                print('fem_main', axe, code)
 
             self.last_loop_state['moduli'] = ModuliGetter().get_moduli(
                 fname_template='test_elas_E{0}_results.txt',
@@ -309,15 +317,16 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             return 0
 
         self.last_loop_state['start_time'] = time.time()
-        cpp_out_log_name = self.wd + '_'.join(['py_cpp_log',
+        cpp_out_log_name = '_'.join(['py_cpp_log',
             self.initial_settings['task_name'],
             str(self.last_loop_state['seconds'])])
-        self.files_to_remove.add(self.wd + cpp_out_log_name)
+        self.files_to_remove.add(cpp_out_log_name)
         fem_env = os.environ
         fem_env['LD_LIBRARY_PATH'] = self.initial_settings['LD_LIBRARY_PATH']
 
         for sub_task in [run_cpp, process_cpp_log, run_fem, log_iteration]:
             code = sub_task()
+            print(sub_task.__name__, code)
             if code not in [0, 2]:
                 return code
 

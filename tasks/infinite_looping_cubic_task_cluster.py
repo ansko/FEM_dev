@@ -53,13 +53,16 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
             wd = kwargs['working_directory']
         self.initial_settings['working_directory'] = wd
         self.wd =wd+ '/'
+        if wd not in os.listdir():
+            os.mkdir(wd)
+        os.chdir(wd)
         settings['ars'] = [50]#settings['ars'][-1:]
         try:
             self.initial_settings['task_name'] = kwargs['task_name']
             asc_time = time.asctime().split()
             self.year_month_day = '_'.join([asc_time[4], asc_time[1], asc_time[2]])
-            self.py_main_log = self.wd + 'py_main_log_' + self.year_month_day
-            for dirname in ['logs', 'geo', wd]:
+            self.py_main_log = 'py_main_log_' + self.year_month_day
+            for dirname in ['logs', 'geo']:
                 if dirname not in os.listdir():
                     os.mkdir(dirname)
         except Exception as e: # Something that should never happen
@@ -135,11 +138,12 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
         def copy_files_to_cluster():
             sftp = self.ssh.open_sftp()
             sftp.put(
-                self.local_working_directory + self.loop_settings['geo_fname'],
+                self.local_working_directory + self.wd +
+                    self.loop_settings['geo_fname'],
                 self.remote_working_directory + '1.geo'
             )
             for fname in ['input_XX.txt', 'input_YY.txt', 'input_ZZ.txt']:
-                sftp.put(self.local_working_directory + fname,
+                sftp.put(self.local_working_directory + self.wd + fname,
                     self.remote_working_directory + fname)
             sftp.close()
 
@@ -150,7 +154,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                 'test_elas_EZZ_results.txt']:
                     sftp.get(
                         self.remote_working_directory + fname,
-                        self.local_working_directory + fname
+                        self.local_working_directory + self.wd + fname
                     )
             sftp.close()
 
@@ -194,7 +198,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                     if not required_setting in settings.keys():
                         print('error: required general setting is not set')
                         return 0
-                with open(self.wd + fname, 'w') as f:
+                with open(fname, 'w') as f:
                     for (setting_name, setting_value) in settings.items():
                         f.write(' '.join([
                             str(setting_name), str(setting_value), '\n']))
@@ -208,7 +212,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                     self.initial_settings['cpp_polygons_executables']
                         [self.initial_settings['task_name'].replace(
                             'cluster_', '')],
-                 self.wd + self.initial_settings['cpp_settings_fname']],
+                 self.initial_settings['cpp_settings_fname']],
                 stdout=open('logs/cpp_log_{0}'.format(self.year_month_day), 'a'),
                 stderr=open('logs/all_errors_{0}'.format(self.year_month_day),
                     'a'))
@@ -273,13 +277,16 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
         def wait_for_cluster():
             while True:
                 stdin, stdout, stderr = self.ssh.exec_command(
-                    'squeue --user=antonsk')
+                    'squeue --user=antonsk') # (-o "%.10i %.15j %.2t %.10M")
                 tasks = stdout.readlines()[1:]
                 if not tasks:
                     break
                 else:
+                    print('*** tasks on cluster ***')
                     for task in tasks:
-                        print(task.split())
+                        ls = task.split()
+                        print('number={0}, name={1}, state={2}, time={3}'.format(
+                            ls[0], ls[2], ls[4], ls[5]))
                     print(' *** ')
                 time.sleep(5)
             if stderr.readlines():
@@ -339,6 +346,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
             self.files_to_remove.add(cpp_out_log_name)
             self.last_loop_state['last_step'] = 'run_cpp'
             self.last_loop_state['run_cpp_return_code'] = run_cpp()
+            print('cpp', self.last_loop_state['run_cpp_return_code'])
         if start_step in [None, self.steps[2]]:
             self.last_loop_state['last_step'] = 'process_cpp_log'
             self.last_loop_state['process_cpp_log_return_code'] = process_cpp_log()
