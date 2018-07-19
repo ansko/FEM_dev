@@ -1,3 +1,7 @@
+import os
+import sys
+
+
 class InfiniteLoopingTask:
     successful_loops_performed = 0
     loops_performed = 0
@@ -5,7 +9,11 @@ class InfiniteLoopingTask:
     loop_settings = dict()
     initial_settings = dict()
     last_loop_state = dict()
+
     def __init__(self, *args, **kwargs):
+        sys.stdout = open('tmp/' + str(os.getpid()) +
+            '_{0}.out'.format(self.__class__.__name__),
+            'w')
         self.prepare(*args, **kwargs)
         while True:
             self.print_info(*args, **kwargs) # About current loop settings and

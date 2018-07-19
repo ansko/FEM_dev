@@ -6,7 +6,8 @@ from tasks.infinite_looping_cubic_task_cluster import (
 if __name__ == '__main__':
     InfiniteLoopingCubicTaskCluster(
         task_name='cluster_mc',
-        start_step='wait_fem_gen'
+        #start_step='wait_fem_gen'
+        #start_step='prepare_cluster'
     )
 
 

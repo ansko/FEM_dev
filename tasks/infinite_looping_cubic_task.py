@@ -34,7 +34,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             'FEMFolder', 'memory', 'limitation_memory_ratio', 'taus',
             'disk_thickness'):
                 self.initial_settings[key] = settings[key]
-
+        print('cubic', sys.stdout.name, file=sys.stderr)
         self.initial_settings['ars'] = [10]#self.initial_settings['ars']
         wd = 'cubic'
         if 'working_directory' in kwargs.keys():
@@ -57,7 +57,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             asc_time = time.asctime().split()
             self.year_month_day = '_'.join([asc_time[4], asc_time[1], asc_time[2]])
             self.py_main_log = 'py_main_log_' + self.year_month_day
-            for dirname in ['logs', 'geo']:
+            for dirname in ['logs', 'geo', 'files']:
                 if dirname not in os.listdir():
                     os.mkdir(dirname)
         except Exception as e: # Something that should never happen
@@ -263,7 +263,13 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             for axe in ['XX', 'YY', 'ZZ']:
                 code = run_fem_main(axe)
                 print('fem_main', axe, code)
-
+            for fname in [
+                'test_elas_EXX_results.txt',
+                'test_elas_EYY_results.txt',
+                'test_elas_EZZ_results.txt'
+                ]:
+                    shutil.copyfile(fname, 'files/' +
+                        self.last_loop_state['seconds'] + '_' + fname)
             self.last_loop_state['moduli'] = ModuliGetter().get_moduli(
                 fname_template='test_elas_E{0}_results.txt',
                 axis=['XX', 'YY', 'ZZ'])
@@ -325,8 +331,9 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
         fem_env['LD_LIBRARY_PATH'] = self.initial_settings['LD_LIBRARY_PATH']
 
         for sub_task in [run_cpp, process_cpp_log, run_fem, log_iteration]:
+            print('running', sub_task.__name__, end='... ', flush=True)
             code = sub_task()
-            print(sub_task.__name__, code)
+            print('done!', sub_task.__name__, code)
             if code not in [0, 2]:
                 return code
 
@@ -336,6 +343,8 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
         return 0
 
     def postprocess(self, *args, **kwargs):
+        shutil.move('settings_cpp', 'files/{0}_settings_cpp'.format(
+            self.last_loop_state['seconds']))
         for fname in self.files_to_remove:
             if fname in os.listdir():
                 os.remove(fname)
