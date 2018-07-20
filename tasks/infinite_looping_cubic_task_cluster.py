@@ -52,7 +52,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                 self.initial_settings[key] = settings[key]
 
         #
-        self.initial_settings['ars'] = [50]
+        self.initial_settings['ars'] = [5]
         #
         wd = 'cluster_cubic'
         if 'working_directory' in kwargs.keys():
@@ -62,7 +62,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
         if wd not in os.listdir():
             os.mkdir(wd)
         os.chdir(wd)
-        settings['ars'] = [50]#settings['ars'][-1:]
+        #settings['ars'] = [50]#settings['ars'][-1:]
         try:
             self.initial_settings['task_name'] = kwargs['task_name']
             asc_time = time.asctime().split()
@@ -174,8 +174,8 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                 )
                 shutil.copyfile(
                     self.local_working_directory + self.wd + fname,
-                    self.local_working_directory + self.wd +
-                        self.last_loop_state['seconds'] + fname
+                    self.local_working_directory + self.wd + 'files/' +
+                        self.last_loop_state['seconds'] + '_' + fname
                 )
             sftp.close()
             print('done!', flush=True)
@@ -323,16 +323,24 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                     print('\t*** tasks on cluster ***', time.asctime(), flush=True)
                     for task in tasks:
                         ls = task.split()
-                        print('\tnumber={0}, name={1}, state={2}, time={3}'.format(
-                                ls[0], ls[2], ls[4], ls[5]),
-                            time.asctime(),
-                            flush=True)
-                        print('waiting for',
-                            'number={0}, name={1}, state={2}, time={3}'.format(
-                                ls[0], ls[2], ls[4], ls[5]),
-                            time.asctime(),
-                            flush=True,
-                            file=sys.stderr)
+                        fmt = 'number={0}, name={1}, state={2}, time={3}'.format(
+                            ls[0], ls[2], ls[4], ls[5])
+                        print('\t', fmt, time.asctime(), flush=True)
+                        new_line = 'waiting for ' + fmt + ' ' + time.asctime()
+                        try:
+                            # https://stackoverflow.com/a/5291044:
+                            #     "\033[F" - Cursor up one line
+                            #     "\033[K" - Clear to the end of line
+                            if (self.last_loop_state[
+                                'last_line_stderr'].split()[:5] ==
+                                     new_line.split()[:5]):
+                                         print(''.join(['\033[F', '\033[K',
+                                                 new_line]),
+                                             file=sys.stderr, flush=True)
+                        except:
+                            # first check leads here
+                            print(new_line, flush=True, file=sys.stderr)
+                        self.last_loop_state['last_line_stderr'] = new_line
                     print(' *** ', flush=True)
                 time.sleep(5)
             if stderr.readlines():
@@ -527,6 +535,20 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
             restart_manager_str = 'sudo service network-manager restart'
             start_wifi_str = 'ifconfig wlan0 down'
             subprocess.call(restart_manager_str.split())
+        except OSError:
+            # i do not know why it happens excatly
+            restart_manager_str = 'sudo service network-manager restart'
+            start_wifi_str = 'ifconfig wlan0 down'
+            subprocess.call(restart_manager_str.split())
+        except Exception as e:
+            print('got unexpected exception\n',
+                e,
+               'trying to restart network manager and continue looping',
+               file=sys.stderr)
+            restart_manager_str = 'sudo service network-manager restart'
+            start_wifi_str = 'ifconfig wlan0 down'
+            subprocess.call(restart_manager_str.split())
+
         return 0
 
     def postprocess(self, *args, **kwargs):
@@ -546,5 +568,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                  os.remove('/'.join([os.getcwd(), fname]))
             except:
                  pass
+        shutil.move('settings_cpp', 'files/{0}_settings_cpp'.format(
+            self.last_loop_state['seconds']))
         print('done!', flush=True)
         return 0

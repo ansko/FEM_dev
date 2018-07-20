@@ -1,13 +1,14 @@
 import math
 import os
 import pprint
-pprint=pprint.PrettyPrinter(indent=4).pprint
 import random
 import resource
 import shutil
 import sys
 import subprocess
 import time
+
+pprint=pprint.PrettyPrinter(indent=4, stream=sys.stderr).pprint
 
 from settings.settings import Settings
 from tasks.infinite_looping_task import  InfiniteLoopingTask
@@ -35,7 +36,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             'disk_thickness'):
                 self.initial_settings[key] = settings[key]
         print('cubic', sys.stdout.name, file=sys.stderr)
-        self.initial_settings['ars'] = [10]#self.initial_settings['ars']
+        self.initial_settings['ars'] = [5]#self.initial_settings['ars']
         wd = 'cubic'
         if 'working_directory' in kwargs.keys():
             wd = kwargs['working_directory']
@@ -96,6 +97,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                     'Lr', str(self.initial_settings['L_div_outer_r']),
                     'ar', str(self.loop_settings['ar'])]),
                 'geo'])])
+        print(time.asctime(), file=sys.stderr, flush=True)
         pprint(self.loop_settings)
 
 
@@ -300,8 +302,11 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                         parsed_log['percolation_y'] = bool(int(value))
                     elif other == '(percolation flag along z: )\n':
                         parsed_log['percolation_z'] = bool(int(value))
-            fi_real = (parsed_log['fillers_real_number'] /
-                self.loop_settings['N'] * self.loop_settings['fi_max_possible'])
+            fi_real = (
+                parsed_log['fillers_real_number'] /
+                self.loop_settings['N'] *
+                self.loop_settings['fi_max_possible']
+            )
             self.loop_settings['fi_real'] = fi_real
             perc_str = ''
             perc_str += ('1' if parsed_log['percolation_x'] else '0')
@@ -340,6 +345,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
         iteration_time = time.time() - self.last_loop_state['start_time']
         print('\tfi', self.loop_settings['fi_real'])
         print('\titeration took', iteration_time)
+        print('done!', self.successful_loops_performed, file=sys.stderr)
         return 0
 
     def postprocess(self, *args, **kwargs):

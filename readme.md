@@ -2,12 +2,14 @@
 
 I. Submodules  
 git submodule add https://github.com/ansko/RELEASE_CppPolygons.git RELEASE_CppPolygons  
-git submodule add https://github.com/ansko/ClusterRunner.git cluster  
 II. Preparatoin  
 cd RELEASE_CppPolygons
 cmake CMakeLists.txt
 make
 
+# Warning
+
+It is supposed that every successive loop performs for more than 1 second
 
 # Settings
 

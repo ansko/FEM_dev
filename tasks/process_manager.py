@@ -127,6 +127,7 @@ class ProcessesManager:
             print('task name is not specified')
             task_name = input('enter task name: ')
         print('all is done, starting self-controlled task')
+        print(' --- bye! ---')
         self.processes.append(multiprocessing.Process(
             target=lambda: InfiniteLoopingCubicTask(task_name=task_name)).start())
         return 0
