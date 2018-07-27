@@ -15,6 +15,7 @@ def local_kill():
     for proc in psutil.process_iter():
         if proc.name() in ['python3', 'MC_exfoliation', 'gen_mesh.x',
             'processMesh.x', 'FEManton3.o', 'FEManton2.o'] and proc.ppid() == 1:
+                print('local stop', proc.name())
                 psutil.Process(proc.pid).terminate()
     return 0
 
@@ -29,7 +30,9 @@ def remote_kill():
     )
     stdin, stdout, stderr = ssh.exec_command('squeue --user=antonsk')
     task_numbers = [int(line.split()[0]) for line in stdout.readlines()[1:]]
-    for task_number in task_numbers:
+    task_names = [int(line.split()[1]) for line in stdout.readlines()[1:]]
+    for idx, task_number in enumerate(task_numbers):
+        print('remote stop', task_names[idx])
         stdin, stdout, stderr = ssh.exec_command('scancel {0}'.format(task_number))
     return 0
 

@@ -15,7 +15,7 @@ start_step_values_available = set([
 
 ##############################
 
-simultaneous_tasks_number = 3
+simultaneous_tasks_number = 15
 
 ##############################
 
