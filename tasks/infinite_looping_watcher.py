@@ -25,6 +25,7 @@ class InfiniteLoopingWatcher(InfiniteLoopingTask):
         'waiting_FEManton3.o_y': 11,
         'waiting_FEManton3.o_z': 12,
     }
+    last_loop_state = {}
 
     def prepare(self, *args, **kwargs):
         print('watcher', sys.stdout.name, file=sys.stderr)

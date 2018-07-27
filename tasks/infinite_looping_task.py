@@ -1,23 +1,20 @@
 import os
 import sys
+import time
 
 
 class InfiniteLoopingTask:
+
     successful_loops_performed = 0
     loops_performed = 0
-    loop_return_values = dict()
-    loop_settings = dict()
-    initial_settings = dict()
-    last_loop_state = dict()
 
     def __init__(self, *args, **kwargs):
-        sys.stdout = open('tmp/' + str(os.getpid()) +
-            '_{0}.out'.format(self.__class__.__name__),
-            'w')
+        stdout_fname = 'tmp/{0}_{1}.out'.format(
+            self.__class__.__name__, str(int(time.time())))
+        sys.stdout = open(stdout_fname, 'w')
         self.prepare(*args, **kwargs)
         while True:
-            self.print_info(*args, **kwargs) # About current loop settings and
-                              # previous loop results.
+            self.print_info(*args, **kwargs)
             self.last_loop_state = dict()
             self.set_loop_settings(*args, **kwargs)
             if self.loops_performed == 0:

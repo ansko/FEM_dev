@@ -24,6 +24,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
         'test_elas_EXX_results.txt', 'test_elas_EYY_results.txt',
         'test_elas_EZZ_results.txt', 'stresses.txt'
     ])
+    initial_settings = {}
 
     def prepare(self, *args, **kwargs):
         # All settings that are stored in the settings.py, not all of them
@@ -36,7 +37,7 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             'disk_thickness'):
                 self.initial_settings[key] = settings[key]
         print('cubic', sys.stdout.name, file=sys.stderr)
-        self.initial_settings['ars'] = [5]#self.initial_settings['ars']
+        self.initial_settings['ars'] = [5, 10, 15, 20]#self.initial_settings['ars']
         wd = 'cubic'
         if 'working_directory' in kwargs.keys():
             wd = kwargs['working_directory']
