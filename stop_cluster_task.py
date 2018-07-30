@@ -29,11 +29,15 @@ def remote_kill():
         key_filename=ClusterSettingsKiaeMe().key
     )
     stdin, stdout, stderr = ssh.exec_command('squeue --user=antonsk')
-    task_numbers = [int(line.split()[0]) for line in stdout.readlines()[1:]]
-    task_names = [int(line.split()[1]) for line in stdout.readlines()[1:]]
-    for idx, task_number in enumerate(task_numbers):
+    out_lines = stdout.readlines()[1:]
+    task_numbers = [int(line.split()[0]) for line in out_lines]
+    task_names = [line.split()[2] for line in out_lines]
+    if (len(task_numbers) != len(task_names)):
+        print(task_numbers, task_names)
+    for idx in range(min(len(task_numbers), len(task_names))):
         print('remote stop', task_names[idx])
-        stdin, stdout, stderr = ssh.exec_command('scancel {0}'.format(task_number))
+        stdin, stdout, stderr = ssh.exec_command('scancel {0}'.format(
+            task_numbers[idx]))
     return 0
 
 def main():
