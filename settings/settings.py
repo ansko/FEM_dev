@@ -3,13 +3,14 @@ class Settings(dict):
         # hardware
         self['memory'] = 8 * 1024 ** 3 # 8GB
         self['limitation_memory_ratio'] = 0.3
+
         # general physical parameters
-        self['L_div_outer_r'] = 5
+        self['L_div_outer_r'] = 10
         self['moduli'] = [232, 4, 1.5]
         self['taus'] = [0.5, 1, 1.5, 2, 2.5, 3]
         self['ars'] = [5, 10, 15, 20, 25]
         self['disk_thickness'] = 0.1
-
+        self['fi_limitation'] = 0.02
         # cpp
         self['cpp_directory'] = '/home/anton/AspALL/Projects/FEM_dev/RELEASE_CppPolygons/'
         self['cpp_settings_fname'] = 'settings_cpp'

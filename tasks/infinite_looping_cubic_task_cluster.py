@@ -1,3 +1,4 @@
+import json
 import math
 import os
 import paramiko
@@ -67,7 +68,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                 'disk_thickness', 'vertices_number', 'mixing_steps',
                 'max_attempts', 'cpp_settings_fname', 'required_settings',
                 'cpp_directory', 'moduli', 'FEMFolder', 'memory',
-                'limitation_memory_ratio', 'taus', 'disk_thickness'):
+                'limitation_memory_ratio', 'taus', 'disk_thickness', 'fi_limitation'):
                     self.initial_settings[key] = settings[key]
             wd = '_'.join([self.__class__.__name__, self.remote_wd_short])
             if 'working_directory' in kwargs.keys():
@@ -239,7 +240,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
             sftp.close()
         prepare_local()
         prepare_cluster()
-        self.initial_settings['ars'] = [50] # !!!
+        self.initial_settings['ars'] = [50]
 
 
     def print_info(self, *args, **kwargs):
@@ -255,8 +256,11 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
         self.loop_settings['tau'] = random.choice(self.initial_settings['taus'])
         self.loop_settings['ar'] = random.choice(self.initial_settings['ars'])
         ar = self.loop_settings['ar']
-        Nmax = int(500 * ar / math.pi * 0.05)
-        Nmax = min(100, Nmax)
+        fi_max = self.initial_settings['fi_limitation']
+        vert = self.initial_settings['vertices_number']
+        Lr = self.initial_settings['L_div_outer_r']
+        Nmax = fi_max / math.sin(2*math.pi/vert) / vert * ar * Lr**3
+        Nmax = min(100, int(Nmax))
         self.loop_settings['fi_max_possible'] = math.pi / 500 * Nmax / ar
         self.loop_settings['N'] = random.choice(range(1, Nmax + 1))
         self.loop_settings['outer_radius'] = (
@@ -466,6 +470,7 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                         parsed_log['percolation_y'] = bool(int(value))
                     elif other == '(percolation flag along z: )\n':
                         parsed_log['percolation_z'] = bool(int(value))
+            # !!!
             fi_real = (
                 parsed_log['fillers_real_number'] /
                 self.loop_settings['N'] *
@@ -577,33 +582,52 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
             return self.loop_return_values['ok']
 
         def log_iteration():
-            print('log interation...', end=' ', flush=True)
-            with open(self.py_main_log, 'a') as main_log:
-                main_log.write('\n'.join([
-                    '**********',
-                    ' '.join(['seconds', self.last_loop_state['seconds']]),
-                    ' '.join(['time', time.asctime()]),
-                    ' '.join(['task_name', self.initial_settings['task_name']]),
-                    ' '.join(['N', str(self.loop_settings['N'])]),
-                    ' '.join(['tau', str(self.loop_settings['tau'])]),
-                    ' '.join(['ar', str(self.loop_settings['ar'])]),
-                    ' '.join(['fi_real', str(self.loop_settings['fi_real'])]),
-                    ' '.join(['Ef', str(self.initial_settings['moduli'][0])]),
-                    ' '.join(['Ei', str(self.initial_settings['moduli'][1])]),
-                    ' '.join(['Em', str(self.initial_settings['moduli'][2])]),
-                    ' '.join(['L_div_outer_r',
-                        str(self.initial_settings['L_div_outer_r'])]),
-                    *['='.join([''.join(['E', str(k)]), str(v)])
-                        for k, v in self.last_loop_state['moduli'].items()],
-                    'perc_x {0}'.format(self.last_loop_state['perc_x']),
-                    'perc_y {0}'.format(self.last_loop_state['perc_y']),
-                    'perc_z {0}'.format(self.last_loop_state['perc_z']),
-                    'N_real {0}'.format(self.last_loop_state[
-                        'fillers_real_number']),
-                    ' '.join(['iteration_time',
-                        str(time.time() - self.last_loop_state['start_time']),
-                    '\n'])
-                ]))
+            """
+            Now this should produce log in json format
+            """
+            N = self.last_loop_state['fillers_real_number']
+            vert = self.initial_settings['vertices_number']
+            ar = self.loop_settings['ar']
+            Lr = self.initial_settings['L_div_outer_r']
+            fi_real_corrected = N * math.sin(2*math.pi/vert) * vert / ar / Lr**3
+            json_entry = {
+                'seconds': self.last_loop_state['seconds'],
+                'time': time.asctime(),
+                'task_name': self.initial_settings['task_name'],
+                'N': self.loop_settings['N'],
+                'tau': self.loop_settings['tau'],
+                'ar': self.loop_settings['ar'],
+                'fi_real': self.loop_settings['fi_real'],
+                'Ef': self.initial_settings['moduli'][0],
+                'Ei': self.initial_settings['moduli'][1],
+                'Em': self.initial_settings['moduli'][2],
+                'L_div_outer_r': self.initial_settings['L_div_outer_r'],
+                'perc_x': self.last_loop_state['perc_x'],
+                'perc_y': self.last_loop_state['perc_y'],
+                'perc_z': self.last_loop_state['perc_z'],
+                'N_real': self.last_loop_state['fillers_real_number'],
+                'iteration_time': time.time() - self.last_loop_state['start_time'],
+                'Lx': self.loop_settings['Lx'],
+                'geo_fname': self.loop_settings['geo_fname'],
+                'fi_real_corrected': fi_real_corrected,
+            }
+            if ('XX' in self.last_loop_state['moduli'].keys() and
+                self.last_loop_state['moduli']['XX'] is not None):
+                    json_entry['Exx'] = self.last_loop_state['moduli']['XX']
+            if ('YY' in self.last_loop_state['moduli'].keys() and
+                self.last_loop_state['moduli']['YY'] is not None):
+                    json_entry['Eyy'] = self.last_loop_state['moduli']['YY']
+            if ('ZZ' in self.last_loop_state['moduli'].keys() and
+                self.last_loop_state['moduli']['ZZ'] is not None):
+                    json_entry['Ezz'] = self.last_loop_state['moduli']['ZZ']
+            old_log_content = []
+            try:
+                with open(self.py_main_log) as f:
+                    old_log_content = json.load(f)
+            except FileNotFoundError:
+                pass
+            old_log_content.append(json_entry)
+            json.dump(old_log_content, open(self.py_main_log, 'w'), indent=4)
             print('done!', flush=True)
             return self.loop_return_values['ok']
 
@@ -754,27 +778,8 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                  'mesh.xdr out.mesh mytask.log.* stresses.txt',
                  'test_elas_*'])
             ])
-        #print(command, file=sys.stderr)
         stdin, stdout, stderr = self.ssh.exec_command(command)
         err_lines = stdout.readlines()
-        #print(err_lines, file=sys.stderr)
-        # local clean
-        #for fname in self.files_to_remove:
-        #    fname_to_remove = '/'.join([os.getcwd(), fname])
-        #    try:
-        #         #print(fname_to_remove, file=sys.stderr)
-        #         os.remove(fname_to_remove)
-        #    except:
-        #         #print('here', fname_to_remove, file=sys.stderr)
-        #         pass
-        #for fname in os.listdir(self.local_working_directory):
-        #    if fname in [self.py_main_log, 'settings_cpp']:
-        #        continue
-        #    try:
-        #         os.remove(local_working_directory + fname)
-        #    except:
-        #         #print('here too', fname, file=sys.stderr)
-        #         pass
         shutil.move('settings_cpp', 'files/{0}_settings_cpp'.format(
             self.last_loop_state['seconds']))
         print('done!', flush=True)
