@@ -100,7 +100,9 @@ class InfiniteLoopingCubicTaskCluster(InfiniteLoopingTask):
                     file=sys.stderr)
                 parts = sys.stdout.name.split('/')[1].split('.')[0].split('_')
                 shutil.rmtree(self.local_working_directory +
-                    '_'.join([parts[0], 'FEM', parts[1]]))
+                    '_'.join([parts[0],
+                    self.local_working_directory.split('/')[-2],
+                    parts[1]]))
                 os.remove(self.local_working_directory +
                 sys.stdout.name)
                 sys.exit()

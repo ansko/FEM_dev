@@ -15,9 +15,9 @@ class InfiniteLoopingWatcher(InfiniteLoopingTask):
         'killed_MC_exfoliation': 1,
         'killed_gen_mesh.x': 2,
         'killed_processMesh.x': 3,
-        'killed_FEManton3.o_x': 4,
-        'killed_FEManton3.o_y': 5,
-        'killed_FEManton3.o_z': 6,
+        'killed_FEManton3.o': 4, # x
+        'killed_FEManton3.o': 5, # y
+        'killed_FEManton3.o': 6, # z
         'waiting_MC_exfoliation': 7,
         'waiting_gen_mesh.x': 8,
         'waiting_processMesh.x': 9,

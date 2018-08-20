@@ -38,7 +38,6 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
             'disk_thickness', 'fi_limitation'):
                 self.initial_settings[key] = settings[key]
         print('cubic', sys.stdout.name, file=sys.stderr)
-        self.initial_settings['ars'] = [5, 10, 15, 20]#self.initial_settings['ars']
         wd = 'cubic'
         if 'working_directory' in kwargs.keys():
             wd = kwargs['working_directory']
@@ -102,8 +101,10 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                     'Lr', str(self.initial_settings['L_div_outer_r']),
                     'ar', str(self.loop_settings['ar'])]),
                 'geo'])])
-        print(time.asctime(), file=sys.stderr, flush=True)
-        pprint(self.loop_settings)
+        print(time.asctime(), 'N', self.loop_settings['N'],
+            'ar', self.loop_settings['ar'],
+            file=sys.stderr, flush=True)
+        #pprint(self.loop_settings)
 
 
     def loop(self, *args, **kwargs):
@@ -290,8 +291,11 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
                 'test_elas_EYY_results.txt',
                 'test_elas_EZZ_results.txt'
                 ]:
-                    shutil.copyfile(fname, 'files/' +
-                        self.last_loop_state['seconds'] + '_' + fname)
+                    try:
+                        shutil.copyfile(fname, 'files/' +
+                            self.last_loop_state['seconds'] + '_' + fname)
+                    except FileNotFoundError:
+                        pass
             self.last_loop_state['moduli'] = ModuliGetter().get_moduli(
                 fname_template='test_elas_E{0}_results.txt',
                 axis=['XX', 'YY', 'ZZ'])
@@ -356,9 +360,10 @@ class InfiniteLoopingCubicTask(InfiniteLoopingTask):
         fem_env['LD_LIBRARY_PATH'] = self.initial_settings['LD_LIBRARY_PATH']
 
         for sub_task in [run_cpp, process_cpp_log, run_fem, log_iteration]:
-            print('running', sub_task.__name__, end='... ', flush=True)
+            print('running', sub_task.__name__, end='... ',
+                flush=True, file=sys.stderr)
             code = sub_task()
-            print('done!', sub_task.__name__, code)
+            print('done!', sub_task.__name__, code, file=sys.stderr)
             if code not in [0, 2]:
                 return code
 
